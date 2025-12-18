@@ -1,0 +1,9 @@
+Pub/Sub Asynchronous Ingestion Notes (Sample Document)
+
+Cloud Pub/Sub decouples file upload from document parsing and embedding generation.
+
+Delivery Semantics:
+Pub/Sub provides at-least-once message delivery. A push subscription delivers each message as an HTTP POST request containing a base64-encoded payload and an optional OIDC Bearer token signed by Google for the configured service account.
+
+Idempotency and Retries:
+Because duplicate deliveries can occur, the webhook handler must be idempotent. If a document is already marked as completed, the handler should acknowledge the message with HTTP 200 without duplicating chunks. Permanent validation errors (such as unsupported file types or empty files) should mark the document as failed and return HTTP 200 so Pub/Sub does not retry indefinitely. Transient failures (such as database or AI provider timeouts) should return HTTP 500 so Pub/Sub retries with exponential backoff.

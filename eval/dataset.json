@@ -1,0 +1,82 @@
+[
+  {
+    "id": "single-1",
+    "category": "single_passage",
+    "userId": "eval-user-a",
+    "query": "What is the default maximum concurrent requests per Cloud Run container instance?",
+    "expectedSources": ["cloud-run-notes.md"],
+    "expectedEvidenceSubstrings": ["80 concurrent requests"],
+    "expectedAnswerSummary": "80 concurrent requests per container instance by default.",
+    "expectAnswerable": true
+  },
+  {
+    "id": "single-2",
+    "category": "single_passage",
+    "userId": "eval-user-a",
+    "query": "Which pgvector operator computes cosine distance?",
+    "expectedSources": ["pgvector-notes.md"],
+    "expectedEvidenceSubstrings": ["<=>"],
+    "expectedAnswerSummary": "The <=> operator computes cosine distance.",
+    "expectAnswerable": true
+  },
+  {
+    "id": "multi-1",
+    "category": "multi_passage",
+    "userId": "eval-user-a",
+    "query": "How does Cloud Run reach a private Cloud SQL database, and which pgvector index type avoids a separate training step?",
+    "expectedSources": ["cloud-run-notes.md", "pgvector-notes.md"],
+    "expectedEvidenceSubstrings": ["Direct VPC Egress", "HNSW"],
+    "expectedAnswerSummary": "Cloud Run uses Direct VPC Egress (PRIVATE_RANGES_ONLY) to reach private Cloud SQL, and HNSW builds a graph without a separate training step.",
+    "expectAnswerable": true
+  },
+  {
+    "id": "confusable-1",
+    "category": "similar_wording",
+    "userId": "eval-user-a",
+    "query": "When does Pub/Sub retry a webhook delivery instead of acknowledging it?",
+    "expectedSources": ["pubsub-ingestion-notes.txt"],
+    "expectedEvidenceSubstrings": ["HTTP 500", "Transient failures"],
+    "expectedAnswerSummary": "On transient failures (HTTP 500), Pub/Sub retries with exponential backoff; permanent validation errors return HTTP 200 to acknowledge.",
+    "expectAnswerable": true
+  },
+  {
+    "id": "confusable-2",
+    "category": "similar_wording",
+    "userId": "eval-user-a",
+    "query": "What is the trade-off between setting Cloud Run min-instances to 0 versus 1?",
+    "expectedSources": ["cloud-run-notes.md"],
+    "expectedEvidenceSubstrings": ["cold start", "idle instance billing"],
+    "expectedAnswerSummary": "min-instances=0 saves idle cost but causes cold starts; min-instances=1 eliminates cold starts for the first instance but incurs continuous idle billing.",
+    "expectAnswerable": true
+  },
+  {
+    "id": "unanswerable-1",
+    "category": "unanswerable",
+    "userId": "eval-user-a",
+    "query": "What is the monthly price per gigabyte for Cloud SQL automated backups?",
+    "expectedSources": [],
+    "expectedEvidenceSubstrings": [],
+    "expectedAnswerSummary": "Not present in the provided documents; the model should state that the documents do not contain this information.",
+    "expectAnswerable": false
+  },
+  {
+    "id": "unanswerable-2",
+    "category": "unanswerable",
+    "userId": "eval-user-a",
+    "query": "Which Python web framework is used to implement the backend API?",
+    "expectedSources": [],
+    "expectedEvidenceSubstrings": [],
+    "expectedAnswerSummary": "Not present in the provided documents; the model should not fabricate an answer from the sample corpus.",
+    "expectAnswerable": false
+  },
+  {
+    "id": "isolation-1",
+    "category": "user_isolation",
+    "userId": "eval-user-b",
+    "query": "What is the default maximum concurrent requests per Cloud Run container instance?",
+    "expectedSources": [],
+    "expectedEvidenceSubstrings": [],
+    "expectedAnswerSummary": "eval-user-b has no Cloud Run document and must receive 0 chunks from eval-user-a.",
+    "expectAnswerable": false
+  }
+]

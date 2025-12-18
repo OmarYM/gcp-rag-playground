@@ -1,0 +1,140 @@
+<mxfile host="app.diagrams.net" modified="2025-12-11T21:45:00.000Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="r7a_XyZ" version="21.0.0" type="device">
+  <diagram id="RAG_Playground_Arch" name="Architecture">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- GCP Infrastructure Group -->
+        <mxCell id="2" value="GCP Infrastructure" style="group;whiteSpace=wrap;html=1;container=1;collapsible=0;childLayout=flowLayout;flowOrientation=vertical;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="600" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#d6d6d6;" vertex="1" parent="2">
+          <mxGeometry width="600" height="500" as="geometry" />
+        </mxCell>
+
+        <!-- Components inside GCP -->
+        <mxCell id="4" value="Cloud Run API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;" vertex="1" parent="1">
+          <mxGeometry x="320" y="150" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="5" value="Cloud IAM" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#fbc02d;" vertex="1" parent="1">
+          <mxGeometry x="500" y="100" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="AlloyDB (pgvector)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="1">
+          <mxGeometry x="500" y="200" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="7" value="Vertex AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#c2185b;" vertex="1" parent="1">
+          <mxGeometry x="500" y="300" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Ingestion Pipeline Group -->
+        <mxCell id="8" value="Ingestion Pipeline (Async)" style="group;whiteSpace=wrap;html=1;container=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="400" width="520" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;dashed=1;" vertex="1" parent="8">
+          <mxGeometry width="520" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="10" value="Pub/Sub" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0277bd;" vertex="1" parent="8">
+          <mxGeometry x="180" y="55" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="11" value="Cloud Function" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;" vertex="1" parent="8">
+          <mxGeometry x="320" y="65" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="12" value="Cloud Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="8">
+            <mxGeometry x="20" y="65" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- External Components -->
+        <mxCell id="13" value="User / Developer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="30" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="14" value="React Frontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections -->
+        <!-- User -> FE -->
+        <mxCell id="15" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="13" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- FE -> API -->
+        <mxCell id="16" value="API Calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="14" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- API -> IAM -->
+        <mxCell id="17" value="1. Auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="140" />
+              <mxPoint x="540" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API -> DB -->
+        <mxCell id="18" value="2. Search" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="4" target="6">
+          <mxGeometry relative="1" as="geometry">
+             <Array as="points">
+              <mxPoint x="380" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API -> Vertex -->
+        <mxCell id="19" value="3. Generate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="4" target="7">
+          <mxGeometry relative="1" as="geometry">
+             <Array as="points">
+              <mxPoint x="380" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- User -> GCS -->
+        <mxCell id="20" value="Upload" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="13" target="12">
+          <mxGeometry relative="1" as="geometry">
+             <Array as="points">
+              <mxPoint x="55" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- GCS -> PubSub -->
+        <mxCell id="21" value="Trigger" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="8" source="12" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- PubSub -> IngestFn -->
+        <mxCell id="22" value="Event" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="8" source="10" target="11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- IngestFn -> Vertex (Cross-group edge needs careful handling, simplified here by pointing to absolute coords if we could, but let's just make a stub or rely on rendering) -->
+        <!-- For simplicitly in this XML, I'll add logic to connect IngestFn (ID 11 in group 8) to Vertex (ID 7 in root/group 1?). 
+             Actually edges between groups in valid XML need proper parent structure or absolute points. 
+             I'll just assume the editor handles the referencing by ID mostly fine. -->
+        <mxCell id="23" value="Embed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="11" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="24" value="Store" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="11" target="6">
+          <mxGeometry relative="1" as="geometry">
+             <Array as="points">
+              <mxPoint x="700" y="500" />
+              <mxPoint x="700" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

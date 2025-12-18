@@ -1,0 +1,98 @@
+services:
+  # =========================================
+  # Database Service (PostgreSQL + pgvector)
+  # =========================================
+  db:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-localdevpassword}
+      POSTGRES_DB: ${DB_NAME:-rag_playground}
+    ports:
+      - "${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-rag_playground}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # =========================================
+  # Backend Service (Node.js / Express)
+  # =========================================
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    command: npm run dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "8081:8080"
+    environment:
+      PORT: 8080
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:3000
+      DB_USER: ${DB_USER:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-localdevpassword}
+      DB_NAME: ${DB_NAME:-rag_playground}
+      DB_HOST: db
+      DB_PORT: 5432
+      STORAGE_MODE: ${STORAGE_MODE:-local}
+      LOCAL_UPLOAD_DIR: /app/uploads
+      INGESTION_MODE: ${INGESTION_MODE:-inline}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PROJECT_ID: ${PROJECT_ID:-}
+      REGION: ${REGION:-us-central1}
+      UPLOAD_BUCKET: ${UPLOAD_BUCKET:-}
+      PROCESSING_TOPIC: ${PROCESSING_TOPIC:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./backend/package.json
+
+  # =========================================
+  # Frontend Service (React / Vite)
+  # =========================================
+  frontend:
+    build:
+      context: ./frontend
+      target: builder
+    command: npm run dev -- --host
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8081
+      - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./frontend/package.json
+
+volumes:
+  pgdata:
