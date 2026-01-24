@@ -11,7 +11,7 @@ import {
 } from "./components/ChunkingSettings";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Modal } from "./components/Modal";
-import { LogOut, Menu, X, HelpCircle, Settings } from "lucide-react";
+import { LogOut, Menu, X, Info, SlidersHorizontal } from "lucide-react";
 import { Toaster } from "sonner";
 
 function App() {
@@ -27,98 +27,92 @@ function App() {
     minChunkSize: 50,
   });
 
-  // System instruction for the RAG bot
   const [systemInstruction, setSystemInstruction] = useState(
-    `You are a helpful and friendly AI assistant.
-Your main task is to answer questions based on the provided documents.
-1. Use the provided Context to answer the user's question.
-2. If the answer is in the context, be detailed and cite the specific files if possible.
-3. If the answer is NOT in the context, you may use your general knowledge to be helpful, but please mention that this information is outside the provided documents.
-4. Maintain a conversational and professional tone.`
+    `Answer the user's question using the provided Context.\n- Cite source filenames when referencing retrieved passages.\n- If the Context does not contain the answer, state that clearly before offering any general knowledge.`
   );
 
   const handleUploadComplete = () => {
-    console.log("Upload complete, refreshing list...");
     setRefreshTrigger((prev) => prev + 1);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+      <header className="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="lg:hidden p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              className="lg:hidden p-1.5 hover:bg-zinc-900 rounded-md transition-colors text-zinc-400"
+              aria-label="Toggle sidebar"
             >
-              <Menu className="w-5 h-5 text-slate-400" />
+              <Menu className="w-5 h-5" />
             </button>
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent text-xl font-bold tracking-tight">
-              Omar's RAG Playground{" "}
-              <span className="text-xs font-normal text-slate-500 ml-2 hidden sm:inline-block">
-                v1.2
-              </span>
-            </div>
+            <span className="font-mono text-sm font-medium tracking-tight text-zinc-100">
+              gcp-rag-playground
+            </span>
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 hover:bg-slate-800 text-xs font-medium text-indigo-300 border border-indigo-500/20 transition-all"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900 border border-zinc-800 transition-colors"
             >
-              <Settings className="w-3.5 h-3.5" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
               Settings
             </button>
             <button
               onClick={() => setIsHowItWorksOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 hover:bg-slate-800 text-xs font-medium text-indigo-300 border border-indigo-500/20 transition-all"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900 border border-zinc-800 transition-colors"
             >
-              <HelpCircle className="w-3.5 h-3.5" />
-              How it Works
+              <Info className="w-3.5 h-3.5 text-zinc-400" />
+              Pipeline
             </button>
 
-            <div className="hidden md:block text-sm text-slate-400 border-l border-slate-800 pl-4">
-              {user?.email}
-            </div>
+            {user?.email && (
+              <span className="hidden md:inline-block text-xs font-mono text-zinc-400 border-l border-zinc-800 pl-3 ml-1">
+                {user.email}
+              </span>
+            )}
             <button
               onClick={logout}
-              className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-red-400"
-              title="Sign Out"
+              className="p-1.5 hover:bg-zinc-900 rounded-md transition-colors text-zinc-400 hover:text-zinc-100"
+              title="Sign out"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 flex gap-6 h-[calc(100vh-64px)] overflow-hidden">
-        {/* Sidebar (Desktop) */}
+      <main className="max-w-7xl w-full mx-auto flex-1 flex h-[calc(100vh-56px)] overflow-hidden">
         <aside
           className={`
-                    fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 p-4 transform transition-transform duration-300 z-30
-                    lg:relative lg:transform-none lg:bg-transparent lg:border-none lg:w-80 lg:p-0 lg:block
-                    ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-                `}
+            fixed inset-y-0 left-0 w-80 bg-zinc-950 border-r border-zinc-800 p-4 transform transition-transform duration-200 z-30
+            lg:relative lg:transform-none lg:w-80 lg:block
+            ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          `}
         >
           <div className="flex flex-col h-full gap-4">
-            <div className="lg:hidden flex justify-between items-center mb-2">
+            <div className="lg:hidden flex justify-between items-center pb-2 border-b border-zinc-800">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsHowItWorksOpen(true)}
-                  className="flex items-center gap-2 text-xs font-medium text-indigo-400"
+                  className="text-xs font-medium text-zinc-300"
                 >
-                  <HelpCircle className="w-4 h-4" /> How it Works
+                  Pipeline
                 </button>
-                <div className="h-4 w-px bg-slate-800" />
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center gap-2 text-xs font-medium text-indigo-400"
+                  className="text-xs font-medium text-zinc-300"
                 >
-                  <Settings className="w-4 h-4" /> Settings
+                  Settings
                 </button>
               </div>
-              <button onClick={() => setIsSidebarOpen(false)}>
-                <X className="w-6 h-6 text-slate-400" />
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="text-zinc-400"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -142,16 +136,14 @@ Your main task is to answer questions based on the provided documents.
           </div>
         </aside>
 
-        {/* Overlay for mobile sidebar */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 lg:hidden"
+            className="fixed inset-0 bg-black/60 z-20 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 overflow-hidden">
           <ChatInterface systemInstruction={systemInstruction} />
         </div>
       </main>
@@ -178,7 +170,7 @@ Your main task is to answer questions based on the provided documents.
         </div>
       </Modal>
 
-      <Toaster position="top-center" theme="dark" richColors />
+      <Toaster position="top-center" theme="dark" />
     </div>
   );
 }

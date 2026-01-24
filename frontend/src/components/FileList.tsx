@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authedFetch } from "../lib/api";
 import { useAuth } from "./AuthProvider";
-import { File, CheckCircle, Clock, AlertCircle, Trash } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Trash2 } from "lucide-react";
 
 interface Doc {
   id: string;
   filename: string;
   status: string;
+  error_message?: string | null;
   created_at: string;
   file_size: number;
 }
@@ -25,18 +26,46 @@ export function FileList({
 
   useEffect(() => {
     if (!token) return;
+    let active = true;
     setLoading(true);
+
     const fetchDocs = () => {
+      authedFetch("/documents")
+        .then((res) => res.json())
+        .then((data) => {
+          if (active && Array.isArray(data)) setDocs(data);
+        })
+        .catch((err) => console.error("Failed to load docs", err))
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+
+    fetchDocs();
+    return () => {
+      active = false;
+    };
+  }, [token, refreshTrigger]);
+
+  // Poll while any document is still pending or processing
+  useEffect(() => {
+    if (!token) return;
+    const hasActive = docs.some(
+      (d) => d.status === "pending" || d.status === "processing"
+    );
+    if (!hasActive) return;
+
+    const timer = setInterval(() => {
       authedFetch("/documents")
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) setDocs(data);
         })
-        .catch((err) => console.error("Failed to load docs", err))
-        .finally(() => setLoading(false));
-    };
-    fetchDocs();
-  }, [token, refreshTrigger]);
+        .catch(() => {});
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [token, docs]);
 
   const handleDelete = async (docId: string) => {
     try {
@@ -44,7 +73,6 @@ export function FileList({
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Delete failed");
-      // Refresh list
       setDocs((prev) => prev.filter((d) => d.id !== docId));
       if (onDelete) onDelete();
     } catch (e) {
@@ -55,74 +83,79 @@ export function FileList({
 
   const formatSize = (bytes: number) => {
     if (!bytes) return "0 B";
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (doc: Doc) => {
+    switch (doc.status) {
       case "completed":
-        return <CheckCircle className="w-4 h-4 text-emerald-400" />;
+        return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
       case "processing":
-        return <Clock className="w-4 h-4 text-amber-400 animate-pulse" />;
+      case "pending":
+        return <Clock className="w-3.5 h-3.5 text-amber-400" />;
       case "failed":
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-red-400" />;
       default:
-        return <Clock className="w-4 h-4 text-slate-500" />;
+        return <Clock className="w-3.5 h-3.5 text-zinc-500" />;
     }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col h-full max-h-[500px]">
-      <div className="p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
-        <h3 className="font-semibold text-slate-200 flex items-center gap-2">
-          <File className="w-4 h-4 text-indigo-400" /> My Documents
+    <div className="border border-zinc-800 rounded-lg flex flex-col h-full max-h-[500px] bg-zinc-900/20">
+      <div className="px-3 py-2.5 border-b border-zinc-800 flex items-center justify-between">
+        <h3 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          Documents
         </h3>
+        <span className="text-xs font-mono tabular-nums text-zinc-500">
+          {docs.length}
+        </span>
       </div>
 
-      <div className="overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar">
+      <div className="overflow-y-auto flex-1 divide-y divide-zinc-800/60">
         {loading && docs.length === 0 && (
-          <div className="text-center p-8 text-slate-500 animate-pulse">
+          <div className="p-6 text-center text-xs text-zinc-500">
             Loading...
           </div>
         )}
 
         {!loading && docs.length === 0 && (
-          <div className="text-center p-8 text-slate-500">
-            No files uploaded yet.
+          <div className="p-6 text-center text-xs text-zinc-500">
+            No documents uploaded.
           </div>
         )}
 
         {docs.map((doc) => (
           <div
             key={doc.id}
-            className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50"
+            className="flex items-center justify-between px-3 py-2.5 hover:bg-zinc-900/60 transition-colors"
           >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-slate-700 transition-colors">
-                <File className="w-4 h-4 text-indigo-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-200 truncate">
-                  {doc.filename}
+            <div className="min-w-0 pr-2">
+              <p className="text-xs font-medium text-zinc-200 truncate font-mono">
+                {doc.filename}
+              </p>
+              <p className="text-[11px] text-zinc-500 tabular-nums mt-0.5">
+                {formatSize(doc.file_size)} ·{" "}
+                {new Date(doc.created_at).toLocaleDateString()}
+              </p>
+              {doc.status === "failed" && doc.error_message && (
+                <p className="text-[11px] text-red-400 truncate mt-0.5">
+                  {doc.error_message}
                 </p>
-                <p className="text-xs text-slate-500 flex items-center gap-2">
-                  {formatSize(doc.file_size)} •{" "}
-                  {new Date(doc.created_at).toLocaleDateString()}
-                </p>
-              </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="pl-2" title={doc.status}>
-                {getStatusIcon(doc.status)}
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span title={doc.error_message || doc.status}>
+                {getStatusIcon(doc)}
+              </span>
               <button
                 onClick={() => handleDelete(doc.id)}
-                className="text-red-500 hover:text-red-400"
+                className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
                 title="Delete"
+                aria-label={`Delete ${doc.filename}`}
               >
-                <Trash className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

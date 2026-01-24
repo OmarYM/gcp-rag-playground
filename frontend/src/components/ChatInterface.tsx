@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Send, User, Bot, Loader2, RotateCcw } from "lucide-react";
+import { Send, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "../lib/utils";
 import { authedFetch } from "../lib/api";
@@ -8,6 +8,8 @@ import { authedFetch } from "../lib/api";
 interface SourceItem {
   filename: string;
   content: string;
+  chunk_index?: number;
+  score?: number;
 }
 
 interface Message {
@@ -22,34 +24,19 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
-  // const { token } = useAuth(); // Token is now handled by authedFetch
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "model",
-      content: "Hello! I'm ready to answer questions about your documents.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleNewChat = () => {
-    setMessages([
-      {
-        role: "model",
-        content: "Hello! I'm ready to answer questions about your documents.",
-      },
-    ]);
+    setMessages([]);
     setInputValue("");
-    toast.info("Chat conversation reset.");
+    toast.info("Conversation cleared.");
   };
 
   const handleSendMessage = async () => {
@@ -60,33 +47,30 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
       return;
     }
 
-    const history = messages
-      .filter((m) => m.role === "user" || m.role === "model")
-      // Filter out the initial welcome message if needed, or keeping it is fine as long as logic handles it.
-      // Actually backend expects {role: 'user'|'model', parts: [{text}]}
-      // My state is {role: 'user'|'model', content: string}
-      .slice(1) // Skip the first "Hello!" message to avoid confusing the model? Or keep it? keeping it is usually fine but it's a static string. Safer to skip if it's just a placeholder.
-      .map((m) => ({
-        role: m.role,
-        parts: [{ text: m.content }],
-      }));
+    const history = messages.map((m) => ({
+      role: m.role,
+      parts: [{ text: m.content }],
+    }));
 
-    const userMessage = { role: "user" as const, content: inputValue };
-    setMessages((prev) => [...prev, userMessage]);
+    const queryText = inputValue;
+    setMessages((prev) => [...prev, { role: "user", content: queryText }]);
     setInputValue("");
-    // setSources([]); // Global state removed
     setIsLoading(true);
 
     try {
-      console.log("Starting stream...");
       const response = await authedFetch("/chat", {
         method: "POST",
         body: JSON.stringify({
-          query: inputValue,
+          query: queryText,
           systemInstruction: systemInstruction || undefined,
-          history: history,
+          history,
         }),
       });
+
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || `Request failed (${response.status})`);
+      }
 
       if (!response.body) throw new Error("No response body");
 
@@ -94,8 +78,7 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
       const decoder = new TextDecoder();
       let aiResponseText = "";
 
-      // Add initial AI placeholder
-      setMessages((prev) => [...prev, { role: "model" as const, content: "" }]);
+      setMessages((prev) => [...prev, { role: "model", content: "" }]);
 
       let buffer = "";
 
@@ -105,28 +88,32 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
-        buffer = lines.pop() || ""; // Keep incomplete chunk
+        buffer = lines.pop() || "";
 
         for (const block of lines) {
           if (!block.trim()) continue;
 
           const blockLines = block.split("\n");
-          let isContext = false;
+          let eventType: "context" | "error" | "message" = "message";
           let contextData = null;
 
           for (const line of blockLines) {
             if (line.startsWith("event: context")) {
-              isContext = true;
+              eventType = "context";
+            } else if (line.startsWith("event: error")) {
+              eventType = "error";
             } else if (line.startsWith("data: ")) {
               const jsonStr = line.slice(6);
-              if (isContext) {
+              if (eventType === "context") {
                 try {
                   contextData = JSON.parse(jsonStr);
                 } catch (e) {
                   console.error("Bad context json", e);
                 }
+              } else if (eventType === "error") {
+                const errPayload = JSON.parse(jsonStr);
+                throw new Error(errPayload.error || "Stream interrupted");
               } else {
-                // Token data
                 try {
                   const payload = JSON.parse(jsonStr);
                   if (payload.token) {
@@ -137,28 +124,31 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
                       newMessages[newMessages.length - 1] = {
                         role: "model",
                         content: aiResponseText,
-                        // Preserve existing sources and open state
                         sources: lastMsg.sources,
                         isSourcesOpen: lastMsg.isSourcesOpen,
                       };
                       return newMessages;
                     });
                   }
-                } catch (e) {}
+                } catch {
+                  // Ignore partial JSON frames
+                }
               }
             }
           }
 
-          if (isContext && contextData) {
+          if (eventType === "context" && Array.isArray(contextData)) {
             setMessages((prev) => {
               const newMessages = [...prev];
               const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg.role === "model") {
+              if (lastMsg?.role === "model") {
                 newMessages[newMessages.length - 1] = {
                   ...lastMsg,
-                  sources: contextData.map((c: any) => ({
+                  sources: contextData.map((c: SourceItem) => ({
                     filename: c.filename,
                     content: c.content,
+                    chunk_index: c.chunk_index,
+                    score: c.score,
                   })),
                   isSourcesOpen: false,
                 };
@@ -168,17 +158,14 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
           }
         }
       }
-
-      console.log("Stream finished.");
     } catch (error) {
       console.error("Chat error:", error);
-      toast.error("Failed to send message. Please try again.");
+      toast.error("Failed to send message.");
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          content:
-            "Error: Something went wrong communicating with the backend.",
+          content: "Error: Failed to retrieve or generate a response.",
         },
       ]);
     } finally {
@@ -188,83 +175,97 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages Area */}
-      <div className="flex-none p-4 border-b border-slate-800 flex justify-end">
+      <div className="flex-none px-6 py-3 border-b border-zinc-800 flex items-center justify-between">
+        <span className="text-xs text-zinc-500 font-mono">
+          top-k=5 · cosine similarity
+        </span>
         <button
           onClick={handleNewChat}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-colors border border-slate-700 hover:border-slate-600"
-          title="Reset conversation"
+          disabled={messages.length === 0}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-zinc-800 disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          New Chat
+          <RotateCcw className="w-3 h-3" />
+          New chat
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        {messages.length === 0 && (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-sm text-zinc-500">
+              Upload a document on the left, then ask a question below.
+            </p>
+          </div>
+        )}
+
         {messages.map((msg, idx) => (
           <div
             key={idx}
             className={cn(
-              "flex gap-4 max-w-3xl",
-              msg.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
+              "max-w-3xl",
+              msg.role === "user" ? "ml-auto" : "mr-auto w-full"
             )}
           >
-            <div
-              className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border",
-                msg.role === "user"
-                  ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400"
-                  : "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-              )}
-            >
-              {msg.role === "user" ? (
-                <User className="w-5 h-5" />
-              ) : (
-                <Bot className="w-5 h-5" />
-              )}
+            <div className="text-[11px] font-mono text-zinc-500 mb-1.5">
+              {msg.role === "user" ? "you" : "assistant"}
             </div>
 
             <div
               className={cn(
-                "p-4 rounded-2xl text-sm leading-relaxed shadow-sm max-w-[85%] prose prose-invert prose-sm max-w-none",
+                "rounded-lg text-sm leading-relaxed prose prose-invert prose-sm max-w-none",
                 msg.role === "user"
-                  ? "bg-slate-800 text-slate-100 rounded-tr-none"
-                  : "bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-none"
+                  ? "bg-zinc-800/80 text-zinc-100 px-4 py-2.5"
+                  : "bg-zinc-900/50 border border-zinc-800 text-zinc-200 px-4 py-3"
               )}
             >
               <ReactMarkdown>{msg.content}</ReactMarkdown>
 
-              {/* Context Sources for Model Messages */}
               {msg.role === "model" && (msg?.sources?.length ?? 0) > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <button
-                      onClick={() => {
-                        setMessages((prev) => {
-                          const newMsgs = [...prev];
-                          newMsgs[idx] = {
-                            ...newMsgs[idx],
-                            isSourcesOpen: !newMsgs[idx].isSourcesOpen,
-                          };
-                          return newMsgs;
-                        });
-                      }}
-                      className="text-xs font-medium text-slate-500 hover:text-indigo-400 transition-colors flex items-center gap-1"
-                    >
-                      {msg.isSourcesOpen ? "Hide" : "Show"}{" "}
-                      {msg.sources?.length || 0} Sources
-                    </button>
-                  </div>
+                <div className="mt-3 pt-3 border-t border-zinc-800">
+                  <button
+                    onClick={() => {
+                      setMessages((prev) => {
+                        const newMsgs = [...prev];
+                        newMsgs[idx] = {
+                          ...newMsgs[idx],
+                          isSourcesOpen: !newMsgs[idx].isSourcesOpen,
+                        };
+                        return newMsgs;
+                      });
+                    }}
+                    className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors inline-flex items-center gap-1"
+                  >
+                    {msg.isSourcesOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    {msg.sources?.length || 0} retrieved{" "}
+                    {msg.sources?.length === 1 ? "source" : "sources"}
+                  </button>
 
                   {msg.isSourcesOpen && (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-2.5 space-y-2">
                       {(msg.sources || []).map((src, i) => (
                         <div
                           key={i}
-                          className="bg-slate-950 p-2 rounded text-xs text-slate-400 border border-slate-800"
+                          className="bg-zinc-950 p-2.5 rounded-md text-xs text-zinc-400 border border-zinc-800"
                         >
-                          <p className="line-clamp-3">
-                            <strong>{src.filename}:</strong> {src.content}
+                          <div className="flex items-center justify-between font-mono text-[11px] text-zinc-300 mb-1">
+                            <span>
+                              {src.filename}
+                              {typeof src.chunk_index === "number"
+                                ? `#${src.chunk_index}`
+                                : ""}
+                            </span>
+                            {typeof src.score === "number" && (
+                              <span className="text-zinc-500 tabular-nums">
+                                score {src.score.toFixed(3)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="line-clamp-3 text-zinc-400 m-0">
+                            {src.content}
                           </p>
                         </div>
                       ))}
@@ -275,54 +276,34 @@ export function ChatInterface({ systemInstruction }: ChatInterfaceProps) {
             </div>
           </div>
         ))}
+
         {isLoading && (
-          <div className="flex gap-4 mr-auto max-w-3xl">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 flex items-center justify-center shrink-0">
-              <Loader2 className="w-5 h-5 animate-spin" />
-            </div>
-            <div className="bg-slate-900 border border-slate-800 px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-2 text-slate-400 text-sm">
-              <span
-                className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              ></span>
-              <span
-                className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              ></span>
-              <span
-                className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              ></span>
-            </div>
+          <div className="text-xs font-mono text-zinc-500">
+            Retrieving context and streaming response...
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/50 backdrop-blur">
-        <div className="max-w-4xl mx-auto relative flex items-center">
+      <div className="p-4 border-t border-zinc-800 bg-zinc-950">
+        <div className="max-w-3xl mx-auto relative flex items-center">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Ask a question about your documents..."
+            placeholder="Ask a question about your uploaded documents..."
             disabled={isLoading}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl py-4 pl-4 pr-12 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-4 pr-12 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
           <button
             onClick={handleSendMessage}
             disabled={isLoading || !inputValue.trim()}
-            className="absolute right-2 p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </button>
-        </div>
-        <div className="text-center mt-2">
-          <p className="text-[10px] text-slate-600">
-            AI can make mistakes. Check important info.
-          </p>
         </div>
       </div>
     </div>

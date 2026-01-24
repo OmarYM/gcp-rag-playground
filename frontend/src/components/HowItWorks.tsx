@@ -1,16 +1,4 @@
-import {
-  X,
-  Server,
-  Database,
-  Brain,
-  Lock,
-  FileText,
-  Zap,
-  Cloud,
-  Box,
-  Lightbulb,
-  CheckCircle2,
-} from "lucide-react";
+import { X } from "lucide-react";
 
 interface HowItWorksProps {
   isOpen: boolean;
@@ -20,224 +8,90 @@ interface HowItWorksProps {
 export function HowItWorks({ isOpen, onClose }: HowItWorksProps) {
   if (!isOpen) return null;
 
-  const techStack = [
+  const steps = [
     {
-      icon: <Brain className="text-purple-400" />,
-      title: "Gemini 2.0 Flash",
-      desc: "State-of-the-art multimodal AI for reasoning and generation.",
+      label: "1. Upload",
+      detail:
+        "Files (PDF, DOCX, TXT, MD) are uploaded via a GCS signed URL or local disk endpoint under users/{userId}/.",
     },
     {
-      icon: <Database className="text-indigo-400" />,
-      title: "Cloud SQL (pgvector)",
-      desc: "PostgreSQL with vector embeddings for high-dimensional semantic search.",
+      label: "2. Queue",
+      detail:
+        "POST /documents/ingest publishes an event to Cloud Pub/Sub (or runs inline in local dev) and returns 202 Accepted.",
     },
     {
-      icon: <Server className="text-emerald-400" />,
-      title: "Google Cloud Run",
-      desc: "Serverless containerized backend ensuring auto-scaling and security.",
+      label: "3. Index",
+      detail:
+        "The ingestion worker extracts text, chunks it, generates 768-d embeddings, and writes document_chunks in PostgreSQL.",
     },
     {
-      icon: <Lock className="text-amber-400" />,
-      title: "User-Scoped Isolation",
-      desc: "Authenticated queries filter documents and vector chunks by user ID at the database query boundary.",
-    },
-    {
-      icon: <Zap className="text-blue-400" />,
-      title: "Real-time Streaming",
-      desc: "Server-Sent Events (SSE) for instant token streaming and context transparency.",
-    },
-    {
-      icon: <Cloud className="text-sky-400" />,
-      title: "Cloud Storage",
-      desc: "Robust object storage for raw document retention.",
-    },
-    {
-      icon: <Box className="text-orange-400" />,
-      title: "Terraform IaC",
-      desc: "Complete infrastructure definition as code for reproducible deployments.",
+      label: "4. Retrieve & Stream",
+      detail:
+        "POST /chat embeds the query, runs top-5 cosine similarity (<=>) filtered by user_id, and streams tokens + sources via SSE.",
     },
   ];
 
+  const stack = [
+    ["Frontend", "React, TypeScript, Vite, Tailwind CSS"],
+    ["Backend", "Node.js, Express, TypeScript"],
+    ["Database", "PostgreSQL 15 + pgvector (HNSW)"],
+    ["Queue & Storage", "Cloud Pub/Sub + GCS (or inline + local disk)"],
+    ["Models", "Gemini (Vertex AI or Gemini Developer API)"],
+    ["Infrastructure", "Terraform (VPC, Cloud SQL, Cloud Run, IAM)"],
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95 duration-200 custom-scrollbar">
-        {/* Header */}
-        <div className="top-0 bg-slate-900/95 backdrop-blur z-10 p-6 border-b border-slate-800 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              System Architecture
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Personal cloud-native RAG (Retrieval-Augmented Generation) playground.
-            </p>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            Pipeline & Stack
+          </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+            className="p-1 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors"
+            aria-label="Close"
           >
-            <X className="w-6 h-6 text-slate-400" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-8 space-y-12">
-          {/* Why RAG? */}
-          <section>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-yellow-500" /> Why use RAG?
+        <div className="p-5 space-y-6 text-sm">
+          <div className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+              Request Flow
             </h3>
-            <div className="bg-slate-950/30 border border-slate-800 rounded-xl p-6">
-              <p className="text-slate-300 leading-relaxed mb-8">
-                Retrieval-Augmented Generation (RAG) is a technique that
-                enhances Large Language Models (LLMs) by allowing them to
-                reference authoritative knowledge bases outside their training
-                data before generating a response. This allows you to "chat"
-                with your own private documents without training a new model.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Benefit
-                  title="Ground Responses in Documents"
-                  desc="By retrieving relevant passages from your uploaded files, the model can cite specific source chunks."
-                />
-                <Benefit
-                  title="Private Data Access"
-                  desc="Securely leverage your proprietary data while keeping it isolated from public model training."
-                />
-                <Benefit
-                  title="Source Attribution"
-                  desc="Every answer can be traced back to specific chunks of text in your uploaded files for verification."
-                />
-                <Benefit
-                  title="Cost-Effective Intelligence"
-                  desc="Avoid the massive compute costs of fine-tuning models. Just index your data and query it."
-                />
-              </div>
-            </div>
-          </section>
-          {/* The Workflow */}
-          <section>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-500" /> How It Works
-            </h3>
-            <div className="relative">
-              <div className="space-y-8">
-                <Step
-                  number="1"
-                  title="Secure Ingestion"
-                  desc="Documents are uploaded securely to Google Cloud Storage via signed URLs. Security rules enforce file size and count limits."
-                />
-                <Step
-                  number="2"
-                  title="Event-Driven Processing"
-                  desc="A Pub/Sub webhook triggers the processing pipeline. The backend parses PDFs (handling V2/Uint8Array quirks) and chunks text."
-                />
-                <Step
-                  number="3"
-                  title="Vector Embedding"
-                  desc="Chunks are converted into 768-dimensional vectors using Gemini's embedding model and stored in Cloud SQL with HNSW indexes."
-                />
-                <Step
-                  number="4"
-                  title="Sematic Search & Generation"
-                  desc="User queries utilize cosine similarity search to find relevant context. This context is fed to Gemini 2.0 Flash for grounded, accurate answers."
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Infrastructure & Deployment */}
-          <section>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center gap-2">
-              <Box className="w-5 h-5 text-orange-400" /> Automated Deployment
-            </h3>
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-xl p-6 relative overflow-hidden group hover:border-orange-500/30 transition-colors">
-              <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Server className="w-40 h-40 text-indigo-500 transform rotate-12" />
-              </div>
-
-              <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center">
-                <div className="flex-1">
-                  <p className="text-slate-300 mb-4 leading-relaxed">
-                    The entire infrastructure is defined in{" "}
-                    <span className="text-orange-400 font-semibold">
-                      Terraform
-                    </span>
-                    , managing Cloud Run services, SQL instances, Pub/Sub
-                    topics, and IAM roles.
-                  </p>
-                  <div className="bg-black/50 rounded-lg p-3 border border-slate-800 font-mono text-sm inline-block shadow-inner">
-                    <span className="text-green-400 font-bold">
-                      ./deploy.ps1
-                    </span>{" "}
-                    <span className="text-slate-500 italic">
-                      # 1-click build & deploy
-                    </span>
+            <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-md">
+              {steps.map((s) => (
+                <div key={s.label} className="p-3 space-y-1">
+                  <div className="text-xs font-mono text-zinc-200">
+                    {s.label}
                   </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Tech Stack Grid */}
-          <section>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6">
-              Powered By
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {techStack.map((tech, i) => (
-                <div
-                  key={i}
-                  className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors group"
-                >
-                  <div className="mb-3 p-2 bg-slate-900 w-fit rounded-lg group-hover:scale-110 transition-transform">
-                    {tech.icon}
-                  </div>
-                  <h4 className="font-medium text-slate-200 mb-1">
-                    {tech.title}
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    {tech.desc}
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    {s.detail}
                   </p>
                 </div>
               ))}
             </div>
-          </section>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+              Components
+            </h3>
+            <div className="border border-zinc-800 rounded-md divide-y divide-zinc-800">
+              {stack.map(([k, v]) => (
+                <div
+                  key={k}
+                  className="px-3 py-2 flex items-center justify-between gap-4 text-xs"
+                >
+                  <span className="font-mono text-zinc-400">{k}</span>
+                  <span className="text-zinc-200 text-right">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Step({
-  number,
-  title,
-  desc,
-}: {
-  number: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="flex items-center gap-4 relative z-10">
-      <div className="flex-none w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-slate-300 shadow-xl">
-        {number}
-      </div>
-      <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800/50 flex-1 hover:bg-slate-800 transition-colors">
-        <h4 className="font-medium text-indigo-300 mb-1">{title}</h4>
-        <p className="text-sm text-slate-400">{desc}</p>
-      </div>
-    </div>
-  );
-}
-
-function Benefit({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="mt-1 flex-none">
-        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-      </div>
-      <div>
-        <h4 className="font-medium text-slate-200 text-sm">{title}</h4>
-        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{desc}</p>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import axios from "axios";
-import { UploadCloud, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { getApiUrl, authedFetch } from "../lib/api";
 
@@ -46,7 +46,7 @@ export function FileUpload({
 
     if (!validTypes.includes(file.type) && !hasValidExt) {
       setUploadStatus("error");
-      setErrorMessage("Supported formats: PDF, DOCX, TXT, MD");
+      setErrorMessage("Supported: PDF, DOCX, TXT, MD");
       return;
     }
 
@@ -119,7 +119,7 @@ export function FileUpload({
       }
 
       setUploadStatus("success");
-      toast.success("File uploaded and queued for ingestion.");
+      toast.success("Uploaded and queued for indexing.");
       if (onUploadComplete) {
         onUploadComplete();
       }
@@ -136,83 +136,67 @@ export function FileUpload({
   };
 
   return (
-    <div className="space-y-4">
-      <div
-        className={cn(
-          "border-2 border-dashed rounded-xl p-6 transition-all duration-200 text-center relative overflow-hidden group",
-          uploadStatus === "idle"
-            ? "border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50"
-            : "",
+    <div
+      className={cn(
+        "border border-dashed rounded-lg p-4 transition-colors text-center relative cursor-pointer",
+        uploadStatus === "idle" &&
+          "border-zinc-700 hover:border-zinc-500 bg-zinc-900/40",
+        (uploadStatus === "uploading" || uploadStatus === "processing") &&
+          "border-blue-500/60 bg-blue-500/5",
+        uploadStatus === "success" && "border-emerald-500/50 bg-emerald-500/5",
+        uploadStatus === "error" && "border-red-500/50 bg-red-500/5"
+      )}
+    >
+      <input
+        type="file"
+        accept=".pdf,.docx,.txt,.md"
+        onChange={handleFileChange}
+        disabled={
           uploadStatus === "uploading" || uploadStatus === "processing"
-            ? "border-indigo-500/50 bg-indigo-500/5"
-            : "",
-          uploadStatus === "success"
-            ? "border-emerald-500/50 bg-emerald-500/5"
-            : "",
-          uploadStatus === "error" ? "border-red-500/50 bg-red-500/5" : ""
+        }
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+      />
+
+      <div className="flex items-center justify-center gap-2.5 text-xs">
+        {uploadStatus === "idle" && (
+          <>
+            <Upload className="w-4 h-4 text-zinc-400" />
+            <span className="text-zinc-300 font-medium">
+              Upload document
+            </span>
+            <span className="text-zinc-500 font-mono">PDF, DOCX, TXT, MD</span>
+          </>
         )}
-      >
-        <input
-          type="file"
-          accept=".pdf,.docx,.txt,.md"
-          onChange={handleFileChange}
-          disabled={
-            uploadStatus === "uploading" || uploadStatus === "processing"
-          }
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-        />
 
-        <div className="flex flex-col items-center justify-center gap-2 relative z-0">
-          {uploadStatus === "idle" && (
-            <>
-              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-indigo-400" />
-              </div>
-              <div className="text-xs text-slate-400">
-                <span className="font-medium text-slate-300">
-                  Click to upload
-                </span>{" "}
-                (PDF, DOCX, TXT, MD)
-              </div>
-            </>
-          )}
+        {uploadStatus === "uploading" && (
+          <>
+            <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+            <span className="text-blue-400 font-mono tabular-nums">
+              Uploading {progress}%
+            </span>
+          </>
+        )}
 
-          {uploadStatus === "uploading" && (
-            <>
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <div className="text-xs font-medium text-indigo-400">
-                Uploading... {progress}%
-              </div>
-            </>
-          )}
+        {uploadStatus === "processing" && (
+          <>
+            <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+            <span className="text-amber-400">Queuing ingestion...</span>
+          </>
+        )}
 
-          {uploadStatus === "processing" && (
-            <>
-              <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
-              <div className="text-xs font-medium text-amber-400">
-                Queuing Ingestion...
-              </div>
-            </>
-          )}
+        {uploadStatus === "success" && (
+          <>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-emerald-400">Queued for indexing</span>
+          </>
+        )}
 
-          {uploadStatus === "success" && (
-            <>
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div className="text-xs font-medium text-emerald-400">
-                Queued for indexing!
-              </div>
-            </>
-          )}
-
-          {uploadStatus === "error" && (
-            <>
-              <AlertCircle className="w-8 h-8 text-red-400" />
-              <div className="text-xs text-red-300">{errorMessage}</div>
-            </>
-          )}
-        </div>
+        {uploadStatus === "error" && (
+          <>
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="text-red-300 truncate">{errorMessage}</span>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,3 @@
-import { Sliders } from "lucide-react";
-
 interface SettingsPanelProps {
   systemInstruction: string;
   onSystemInstructionChange: (value: string) => void;
@@ -10,31 +8,25 @@ export function SettingsPanel({
   onSystemInstructionChange,
 }: SettingsPanelProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 text-indigo-400 mb-2">
-        <Sliders className="w-4 h-4" />
-        <h3 className="font-semibold text-sm uppercase tracking-wider">
-          System Settings
-        </h3>
-      </div>
+    <div className="space-y-3">
+      <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+        System Instruction
+      </h3>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label
           htmlFor="system-instruction"
-          className="block text-xs font-medium text-slate-400"
+          className="block text-xs text-zinc-400"
         >
-          AI Persona / Instructions
+          Prompt instructions sent with each query
         </label>
         <textarea
           id="system-instruction"
           value={systemInstruction}
           onChange={(e) => onSystemInstructionChange(e.target.value)}
-          className="w-full h-32 bg-slate-950 border border-slate-800 rounded-md p-3 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none transition-colors"
-          placeholder="You are a helpful assistant..."
+          className="w-full h-28 bg-zinc-950 border border-zinc-800 rounded-md p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500 resize-none transition-colors"
+          placeholder="Answer based on the provided context..."
         />
-        <p className="text-[10px] text-slate-500">
-          Define how the AI should behave or answer questions.
-        </p>
       </div>
     </div>
   );

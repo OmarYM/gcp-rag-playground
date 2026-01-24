@@ -10,7 +10,6 @@ import {
   useContext,
   ReactNode,
 } from "react";
-import { ShieldCheck } from "lucide-react";
 
 interface AuthContextType {
   token: string | null;
@@ -61,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       <AuthContext.Provider
         value={{
           token: token || "dev-bypass-token",
-          user: { email: "local-dev@playground" },
+          user: { email: "local-dev" },
           logout,
         }}
       >
@@ -72,8 +71,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   if (!clientId) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-red-400 p-4 font-mono">
-        Error: VITE_GOOGLE_CLIENT_ID is missing in .env (or set VITE_DEV_AUTH_BYPASS=true for local dev)
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-red-400 p-4 font-mono text-sm">
+        VITE_GOOGLE_CLIENT_ID is missing in .env (or set VITE_DEV_AUTH_BYPASS=true for local dev).
       </div>
     );
   }
@@ -84,33 +83,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         {token ? (
           children
         ) : (
-          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-            <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-              <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
-                <ShieldCheck className="w-8 h-8 text-indigo-400" />
-              </div>
-
-              <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-white tracking-tight">
-                  Welcome Back
-                </h1>
-                <p className="text-slate-400">
-                  Sign in to access your RAG Playground
+          <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+            <div className="max-w-sm w-full bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-5">
+              <div className="space-y-1">
+                <p className="font-mono text-xs text-zinc-500">
+                  gcp-rag-playground
                 </p>
+                <h1 className="text-lg font-semibold text-zinc-100">
+                  Sign in
+                </h1>
               </div>
 
-              <div className="flex justify-center">
+              <div className="flex justify-start">
                 <GoogleLogin
                   onSuccess={handleLoginSuccess}
                   onError={() => console.log("Login Failed")}
                   theme="filled_black"
-                  shape="pill"
+                  shape="rectangular"
                 />
               </div>
-
-              <p className="text-xs text-slate-600">
-                Your data is secure and isolated.
-              </p>
             </div>
           </div>
         )}
