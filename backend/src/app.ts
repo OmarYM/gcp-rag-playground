@@ -155,7 +155,10 @@ export function createApp(deps: AppDependencies) {
       async (req: Request, res: Response) => {
         try {
           const userId = req.user!.sub;
-          const objectKey = decodeURIComponent(req.params.objectKey);
+          const rawKey = Array.isArray(req.params.objectKey)
+            ? req.params.objectKey[0]
+            : req.params.objectKey;
+          const objectKey = decodeURIComponent(rawKey);
           const safeUser = userId.replace(/[^a-zA-Z0-9._-]/g, "_");
           if (!objectKey.startsWith(`users/${safeUser}/`)) {
             return res.status(403).json({ error: "Forbidden upload target" });

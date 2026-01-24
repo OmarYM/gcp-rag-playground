@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -12,7 +12,7 @@ ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # Production Stage
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=builder /app/dist ./dist

@@ -68,7 +68,7 @@ flowchart LR
 ## Local Setup
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 22+
 - Docker & Docker Compose (for local PostgreSQL with `pgvector`)
 - A **Gemini API key** (`GEMINI_API_KEY`) from Google AI Studio (requires internet access; API usage may incur charges depending on your tier/quota).
 
